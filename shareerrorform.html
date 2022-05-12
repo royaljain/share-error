@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+  <html lang="en">
+  <head>
+	  <meta charset="UTF-8">
+	  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	  <title>Share Error</title>
+      <style>
+          textarea {
+            margin-top: 10px;
+            width: 500px;
+            height: 100px;
+            -moz-border-bottom-colors: none;
+            -moz-border-left-colors: none;
+            -moz-border-right-colors: none;
+            -moz-border-top-colors: none;
+            background: none repeat scroll 0 0 rgba(0, 0, 0, 0.07);
+            border-color: -moz-use-text-color #FFFFFF #FFFFFF -moz-use-text-color;
+            border-image: none;
+            border-radius: 6px 6px 6px 6px;
+            border-style: none solid solid none;
+            border-width: medium 1px 1px medium;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12) inset;
+            color: #555555;
+            font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+            font-size: 1em;
+            line-height: 1.4em;
+            padding: 5px 8px;
+            transition: background-color 0.2s ease 0s;
+            }
+
+
+            textarea:focus {
+                background: none repeat scroll 0 0 #FFFFFF;
+                outline-width: 0;
+            }
+
+
+            .button-two{
+                text-align: center;
+                cursor: pointer;
+                font-size:12px;
+                border-radius: 4px;
+                background-color:#7fb44f;
+                border: none;
+                width: 100px;
+                height: 30px;
+                transition: all 0.5s;
+            }
+            
+            .button-two:disabled {
+                color:rgb(150, 150, 150);
+            }
+
+            .error-notice{
+            margin:5px; /* Make sure to keep some distance from all sides */
+            }
+
+            .oaerror{
+                width:80%;
+                background-color: #ffffff;
+                padding:20px;
+                border:1px solid #eee;
+                border-left-width:5px;
+                border-radius: 3px;
+                margin:10px auto;
+                font-family: 'Open Sans', sans-serif;
+                font-size: 10px;
+                word-wrap: break-word;
+                }
+
+            .danger{
+                border-left-color: #d9534f; /* Left side border color */
+                background-color: rgba(217, 83, 79, 0.1); /*Same color as the left border with reduced alpha to 0.1*/
+                }
+
+            .danger strong{
+                color:#d9534f;
+                }
+            
+            .success {
+                    border-left-color: #2b542c;
+                    background-color: rgba(43, 84, 44, 0.1);
+                }
+
+            .success strong {
+                    color: #2b542c;
+                }
+
+            .not-allowed {
+                cursor: not-allowed !important;
+            }
+            
+      </style>
+  </head>
+  <body>
+    <h1> Share your Error Easily</h1>
+
+    <div >
+        <p> Step 1: Copy paste your stack trace - we'll find and pick relevant Javascript / Json files from it</p>
+        <div style="text-align: center; margin-top: 20px;">
+            <textarea onchange="validateStackTrace()" placeholder="Copy paste your stack trace here" rows="20" name="comment[text]" id="stackTrace" cols="40" class="ui-autocomplete-input" autocomplete="off" role="textbox" aria-autocomplete="list" aria-haspopup="true"></textarea>
+            <div id="stackTraceInputs" style="display: none" class="error-notice oaerror"></div>    
+        </div>
+    </div>
+
+    <div>
+        <p> Step 2: Describe your error for other developers</p>
+        <div style="text-align: center; margin-top: 20px;">
+            <textarea onchange="validateErrorDescription()" placeholder="Please keep the description as detailed as possible" rows="20" name="comment[text]" id="errorDesc" cols="40" class="ui-autocomplete-input" autocomplete="off" role="textbox" aria-autocomplete="list" aria-haspopup="true"></textarea>
+            <div id="errorDescInputs" style="display: none" class="error-notice oaerror"></div>
+        </div>
+
+
+    </div>
+    
+    <p> Step 3: Click on "Create Link" button, it'll generate a link with the description and relevant files - share with other developers</p>
+
+    <div style="text-align: center; margin-top: 20px;">
+
+        <div id="url-container" class="copy" style="display: none">
+            <input id="url" type="text" value="">
+            <button type="button">Copy</button>
+            <button type="button" onclick="reset()" type="button">Reset</button>
+        </div>
+
+        <button id="linkButton" disabled onclick="createLink()" class="button-two not-allowed">
+                Create Link                
+        </button>
+
+    </div>
+
+
+    <script>
+
+        
+        let uid;
+
+        const vscode = acquireVsCodeApi();
+        const baseUrl = "https://share-error.onrender.com";
+        let isValidStackTrace = false;
+        let isValidErrorDesc = false;
+
+        
+        const previousState = vscode.getState();
+        
+        if(previousState){
+            uid = previousState.uid
+            restoreState();
+        }else{
+            var array = new Uint32Array(1);
+            window.crypto.getRandomValues(array);
+            uid = array[0].toString();
+            vscode.setState({
+                uid: uid
+            })
+        }
+
+        function restoreState(){
+            document.getElementById('stackTrace').value = previousState.stackTrace;
+            document.getElementById('errorDesc').value = previousState.errorDesc;
+            isValidStackTrace = previousState.isValidStackTrace;
+            isValidErrorDesc = previousState.isValidErrorDesc;
+
+            if (previousState.stackTrace) {
+                validateStackTrace();
+            }
+            
+            if (previousState.errorDesc) {
+                validateErrorDescription();
+            }
+        }
+
+        function storeState(){
+            vscode.setState({
+                stackTrace: document.getElementById('stackTrace').value,
+                errorDesc: document.getElementById('errorDesc').value,
+                isValidStackTrace: isValidStackTrace,
+                isValidErrorDesc: isValidErrorDesc
+            })
+        }
+
+        (function() {
+        var copyButton = document.querySelector('.copy button');
+        var copyInput = document.querySelector('.copy input');
+        copyButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            var text = copyInput.select();
+            document.execCommand('copy');
+        });
+
+        copyInput.addEventListener('click', function() {
+            this.select();
+        });
+        })();
+
+        function enableSubmit(){
+            if(isValidErrorDesc && isValidStackTrace){
+                document.getElementById("linkButton").disabled=false;
+                document.getElementById("linkButton").classList.remove("not-allowed");
+            }else{
+                document.getElementById("linkButton").disabled=true;
+                document.getElementById("linkButton").classList.add("not-allowed");
+
+            }
+        }
+
+        function validateErrorDescription(){
+
+            const errorDesc = document.getElementById('errorDesc').value;
+            const min_length = 100;
+
+            if(errorDesc.length < min_length){
+                isValidErrorDesc =  false;
+                classToggle( "errorDescInputs", "danger", "success");
+                document.getElementById('errorDescInputs').innerHTML = `Error decription too short, need atleast ${min_length} characters`
+                document.getElementById("errorDescInputs").style.display = "block";
+
+            }else{
+                document.getElementById('errorDescInputs').innerHTML = ``
+                document.getElementById("errorDescInputs").style.display = "none";
+                isValidErrorDesc =  true;
+            }
+
+            enableSubmit();
+            storeState();
+        }
+
+        function getFiles(stackTrace){
+            var regex = /\/.*([^\/]*.(json|js))/g
+            var match;
+            var matches = []
+
+            const ignorelist = ['node_modules']
+
+            while (match = regex.exec(stackTrace)) {
+                
+                if(ignorelist.filter((ignore_term) => match[0].includes(ignore_term)).length === 0){
+                    matches.push(match[0])
+                }
+            }
+
+            return [...new Set(matches)]
+        }
+
+        function classToggle(element_id, added, removed){
+            document.getElementById(element_id).classList.add(added);
+            document.getElementById(element_id).classList.remove(removed);
+
+        }
+
+        function validateStackTrace(){
+            const stackTrace = document.getElementById('stackTrace').value;
+            const min_length = 100;
+            const min_files = 1;
+            const files = getFiles(stackTrace)
+
+            if(stackTrace.length < min_length){
+                isValidStackTrace = false;
+                document.getElementById('stackTraceInputs').innerHTML = `Stack trace too short, need atleast ${min_length} characters`
+                
+                classToggle('stackTraceInputs',"danger", "success");
+
+            }else if(files.length < min_files){
+                isValidStackTrace = false;
+                document.getElementById('stackTraceInputs').innerHTML = `Stack trace contains no javascript files, need atleast ${min_files} file(s)`
+                classToggle('stackTraceInputs',"danger", "success");
+            }else{
+
+                isValidStackTrace = true;
+                let str = "Stack trace looks good. Files being uploaded are:" ;
+                str += '<br>'
+                files.forEach((file) => {
+                    str = str + '<br>' + file
+                })
+                str += '<br>'                
+                str += "Ignoring node_modules. If you want to include more files, please add the absolute path in the above box";
+                document.getElementById('stackTraceInputs').innerHTML =  str;
+                classToggle('stackTraceInputs', "success", "danger");
+            }
+            document.getElementById("stackTraceInputs").style.display = "block";
+            enableSubmit();
+            storeState();
+        }
+
+        function reset(){
+            document.getElementById("stackTrace").value = "";
+            document.getElementById("errorDesc").value = "";
+            document.getElementById("url").value = "";
+            document.getElementById("url-container").style.display = "none";
+            document.getElementById("linkButton").style.display = "inline-block";
+            document.getElementById("linkButton").disabled=true;
+            document.getElementById("linkButton").classList.add("not-allowed");
+            document.getElementById("stackTraceInputs").innerHTML = "";
+            document.getElementById("errorDescInputs").innerHTML = "";
+            document.getElementById("stackTraceInputs").style.display = "none";
+            document.getElementById("errorDescInputs").style.display = "none";
+            document.getElementById("stackTraceInputs").classList.remove("success");
+            document.getElementById("errorDescInputs").classList.remove("success");
+        }
+
+        function createLink(){  
+	  	    const stackTrace = document.getElementById('stackTrace').value;
+	  	    const errorDesc = document.getElementById('errorDesc').value;
+                
+            var message = {
+                errorDesc: errorDesc,
+                files: getFiles(stackTrace),
+                stackTrace: stackTrace,
+                uid: uid
+            }
+
+            vscode.postMessage({
+                command: 'submit',
+                text: JSON.stringify(message) 
+            })
+        
+
+            document.getElementById("url").value = `${baseUrl}?colab_id=${uid}`;
+            document.getElementById("url-container").style.display = "block";
+            document.getElementById("linkButton").style.display = "none";            
+            
+        }
+
+      </script>	
+	
+	
+  </body>
+  </html>
