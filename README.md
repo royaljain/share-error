@@ -1,4 +1,4 @@
-# Share your Errors
+# Share your Errors - VS Code Plugin
 
 ShareError turbo-charges debugging by making it easier to share your error and its context with other developers.
 
