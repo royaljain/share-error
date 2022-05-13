@@ -133,32 +133,29 @@ function activate(context) {
 								if(foundWorkspace){
 									const workspacePath = workspaces[index]["uri"]["fsPath"]
 									const workspaceName = workspaces[index]["name"]
-									relPath = fileUri.replace(workspacePath, '');
-									dest = `ShareError/${uid}/${workspaceName}${relPath}`
+									relPath = fileUri.replace(workspacePath, '')
+									let filePath = relPath.replace(/\\/g,'/')
+									dest = `ShareError/${uid}/${workspaceName}${filePath}`
 								}
 								else{
 									relPath = fileUri
-									dest = `ShareError/${uid}${fileUri}`;
+									let filePath = fileUri.replace(/\\/g,'/')
+									if(!filePath.startsWith('/'))filePath = '/'+filePath
+									dest = `ShareError/${uid}${filePath}`;
 								}
 								
-								const storageRef = firebaseStorageFile.ref(storage, dest);
-	
-								
-								firebaseStorageFile.uploadBytes(storageRef, fs.readFileSync(fileUri)).then((snapshot) => {
-									console.log('Uploaded a blob or file!');
-								});
-	
-								files[relPath] = `https://storage.googleapis.com/${bucketName}/${dest}`
 							}else{
 								relPath = fileUri
-								dest = `ShareError/${uid}${fileUri}`;
+								let filePath = fileUri.replace(/\\/g,'/')
+								if(!filePath.startsWith('/'))filePath = '/'+filePath
+								dest = `ShareError/${uid}${filePath}`;
 							}
 							
 							const storageRef = firebaseStorageFile.ref(storage, dest);
 
 							
 							firebaseStorageFile.uploadBytes(storageRef, fs.readFileSync(fileUri)).then((snapshot) => {
-								console.log('Uploaded a blob or file!');
+								console.log(`Uploaded file ${fileUri}`);
 							});
 
 							files[relPath] = `https://storage.googleapis.com/${bucketName}/${dest}`

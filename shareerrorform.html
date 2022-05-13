@@ -226,11 +226,11 @@
         }
 
         function getFiles(stackTrace){
-            var regex = /\/.*([^\/]*.(json|js))/g
+            var regex = /(\/|[A-Za-z]:\\).*([^\/\\]*.(json|js))/g
             var match;
             var matches = []
 
-            const ignorelist = ['node_modules']
+            const ignorelist = ['node_modules', 'node:internal']
 
             while (match = regex.exec(stackTrace)) {
                 
